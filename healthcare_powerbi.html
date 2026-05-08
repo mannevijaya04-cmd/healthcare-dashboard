@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Healthcare Analytics — Power BI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #F3F2F1;
+    color: #252423;
+    min-height: 100vh;
+  }
+
+  /* ─── TOP NAV (Power BI exact style) ─── */
+  .pbi-topbar {
+    height: 48px;
+    background: #1E2025;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    border-bottom: 2px solid #E8B300;
+  }
+  .pbi-logo {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .pbi-logo-icon {
+    width: 24px; height: 24px;
+    background: #E8B300;
+    border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 900; color: #1E2025;
+  }
+  .pbi-logo-text {
+    color: #ffffff;
+    font-size: 14px; font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+  .pbi-logo-sub {
+    color: #A19F9D;
+    font-size: 12px;
+    padding-left: 12px;
+    border-left: 1px solid #444;
+    margin-left: 4px;
+  }
+  .topbar-spacer { flex: 1; }
+  .pbi-tab-bar {
+    display: flex; align-items: center; gap: 2px;
+  }
+  .pbi-tab {
+    color: #A19F9D; font-size: 12px;
+    padding: 6px 14px; border-radius: 3px;
+    cursor: pointer; transition: background .15s;
+  }
+  .pbi-tab:hover { background: #2d3039; color: #fff; }
+  .pbi-tab.active { background: #E8B300; color: #1E2025; font-weight: 600; }
+
+  /* ─── REPORT TITLE BAR ─── */
+  .report-header {
+    background: #ffffff;
+    border-bottom: 1px solid #E1DFDD;
+    padding: 8px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .report-title {
+    font-size: 16px; font-weight: 700; color: #201F1E;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .report-title span { color: #E8B300; font-size: 18px; }
+  .report-meta { font-size: 11px; color: #A19F9D; }
+
+  /* ─── SLICER BAR ─── */
+  .slicer-bar {
+    background: #ffffff;
+    border-bottom: 1px solid #E1DFDD;
+    padding: 8px 24px;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  }
+  .slicer-label { font-size: 11px; color: #605E5C; font-weight: 600; }
+  .slicer-group { display: flex; align-items: center; gap: 8px; }
+  .slicer-pill {
+    padding: 4px 12px;
+    border: 1px solid #E1DFDD;
+    border-radius: 2px;
+    font-size: 11px; color: #605E5C;
+    background: #FAFAFA;
+    cursor: pointer; transition: all .15s;
+  }
+  .slicer-pill.active {
+    background: #E8B300;
+    border-color: #E8B300;
+    color: #1E2025; font-weight: 600;
+  }
+  .slicer-divider {
+    width: 1px; height: 24px; background: #E1DFDD;
+  }
+
+  /* ─── CANVAS / REPORT BODY ─── */
+  .report-canvas {
+    padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+
+  /* ─── VISUALS GRID ─── */
+  .row { display: grid; gap: 10px; }
+  .row-kpi { grid-template-columns: repeat(5, 1fr); }
+  .row-3    { grid-template-columns: 1.6fr 1fr 1fr; }
+  .row-2    { grid-template-columns: 1.1fr 0.9fr; }
+  .row-4    { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .row-2b   { grid-template-columns: 1fr 1.6fr; }
+
+  /* ─── VISUAL CARD (Power BI tile) ─── */
+  .visual {
+    background: #ffffff;
+    border: 1px solid #E1DFDD;
+    border-radius: 4px;
+    padding: 12px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    position: relative;
+    transition: box-shadow .2s;
+  }
+  .visual:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,.12);
+    border-color: #C8C6C4;
+  }
+  .visual-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .visual-title {
+    font-size: 12px; font-weight: 600; color: #201F1E;
+    line-height: 1.3;
+  }
+  .visual-subtitle { font-size: 10px; color: #A19F9D; margin-top: 2px; }
+  .visual-more {
+    font-size: 16px; color: #C8C6C4; cursor: pointer; line-height: 1;
+  }
+
+  /* ─── KPI CARD ─── */
+  .kpi-visual {
+    display: flex; flex-direction: column;
+    justify-content: space-between;
+    min-height: 90px;
+  }
+  .kpi-main-val {
+    font-size: 30px; font-weight: 700;
+    color: #201F1E; line-height: 1.1;
+    margin-top: 4px;
+  }
+  .kpi-target-row {
+    display: flex; align-items: center; gap: 6px; margin-top: 6px;
+  }
+  .kpi-target-label { font-size: 10px; color: #A19F9D; }
+  .kpi-delta {
+    font-size: 11px; font-weight: 600; padding: 2px 7px;
+    border-radius: 2px; display: flex; align-items: center; gap: 3px;
+  }
+  .kpi-delta.up   { background: #DFF6DD; color: #107C10; }
+  .kpi-delta.down { background: #FDE7E9; color: #A4262C; }
+  .kpi-delta.warn { background: #FFF4CE; color: #B7791F; }
+  .kpi-progress {
+    height: 3px; background: #EDEBE9; border-radius: 2px; margin-top: 8px;
+  }
+  .kpi-progress-fill {
+    height: 100%; border-radius: 2px;
+  }
+  .kpi-icon {
+    position: absolute; top: 12px; right: 16px;
+    font-size: 22px; opacity: .15;
+  }
+
+  /* ─── LEGEND ─── */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 10px; color: #605E5C;
+  }
+  .legend-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .legend-rect {
+    width: 12px; height: 8px; border-radius: 1px; flex-shrink: 0;
+  }
+
+  /* ─── TABLE VISUAL ─── */
+  .pbi-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .pbi-table thead tr { background: #F3F2F1; }
+  .pbi-table th {
+    padding: 6px 10px; text-align: left; font-weight: 600;
+    color: #605E5C; border-bottom: 2px solid #E1DFDD;
+    font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  }
+  .pbi-table td { padding: 6px 10px; border-bottom: 1px solid #F3F2F1; color: #252423; }
+  .pbi-table tbody tr:hover { background: #FAF9F8; }
+  .pbi-table tbody tr:last-child td { border-bottom: none; }
+  .td-bar { display: flex; align-items: center; gap: 6px; }
+  .td-bar-bg {
+    width: 55px; height: 5px; background: #EDEBE9; border-radius: 3px;
+  }
+  .td-bar-fill { height: 100%; border-radius: 3px; }
+  .status { 
+    display: inline-block; padding: 2px 8px; border-radius: 2px;
+    font-size: 10px; font-weight: 600;
+  }
+  .st-good  { background: #DFF6DD; color: #107C10; }
+  .st-warn  { background: #FFF4CE; color: #B7791F; }
+  .st-crit  { background: #FDE7E9; color: #A4262C; }
+
+  /* ─── GAUGE ─── */
+  .gauge-wrap { display: flex; flex-direction: column; align-items: center; }
+  .gauge-val { font-size: 28px; font-weight: 700; color: #201F1E; margin-top: -8px; }
+  .gauge-label { font-size: 10px; color: #A19F9D; margin-top: 2px; }
+
+  /* ─── FOOTER ─── */
+  .report-footer {
+    background: #ffffff;
+    border-top: 1px solid #E1DFDD;
+    padding: 6px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .footer-pages { display: flex; gap: 4px; align-items: center; }
+  .page-tab {
+    padding: 4px 14px; font-size: 11px;
+    border: 1px solid #E1DFDD; border-bottom: none;
+    border-radius: 3px 3px 0 0;
+    background: #F3F2F1; color: #605E5C; cursor: pointer;
+  }
+  .page-tab.active { background: #fff; border-color: #E8B300; color: #E8B300; font-weight: 600; }
+  .footer-info { font-size: 10px; color: #A19F9D; }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV BAR -->
+<div class="pbi-topbar">
+  <div class="pbi-logo">
+    <div class="pbi-logo-icon">⚡</div>
+    <div class="pbi-logo-text">Power BI</div>
+  </div>
+  <div class="pbi-logo-sub">Healthcare Analytics Report</div>
+  <div class="topbar-spacer"></div>
+  <div class="pbi-tab-bar">
+    <div class="pbi-tab active">📊 Report</div>
+    <div class="pbi-tab">📋 Data</div>
+    <div class="pbi-tab">🔗 Model</div>
+  </div>
+</div>
+
+<!-- REPORT TITLE -->
+<div class="report-header">
+  <div class="report-title">
+    <span>🏥</span> Healthcare Performance Analytics Dashboard
+  </div>
+  <div class="report-meta">Dataset: Hospital_Records_2024.xlsx &nbsp;|&nbsp; Last Refresh: 08 May 2026, 09:00 AM &nbsp;|&nbsp; Rows: 48,320</div>
+</div>
+
+<!-- SLICER BAR -->
+<div class="slicer-bar">
+  <div class="slicer-group">
+    <div class="slicer-label">YEAR</div>
+    <div class="slicer-pill">2022</div>
+    <div class="slicer-pill">2023</div>
+    <div class="slicer-pill active">2024</div>
+  </div>
+  <div class="slicer-divider"></div>
+  <div class="slicer-group">
+    <div class="slicer-label">QUARTER</div>
+    <div class="slicer-pill active">All</div>
+    <div class="slicer-pill">Q1</div>
+    <div class="slicer-pill">Q2</div>
+    <div class="slicer-pill">Q3</div>
+    <div class="slicer-pill">Q4</div>
+  </div>
+  <div class="slicer-divider"></div>
+  <div class="slicer-group">
+    <div class="slicer-label">DEPARTMENT</div>
+    <div class="slicer-pill active">All Dept.</div>
+    <div class="slicer-pill">Cardiology</div>
+    <div class="slicer-pill">Ortho</div>
+    <div class="slicer-pill">ICU</div>
+    <div class="slicer-pill">OPD</div>
+  </div>
+  <div class="slicer-divider"></div>
+  <div class="slicer-group">
+    <div class="slicer-label">GENDER</div>
+    <div class="slicer-pill active">All</div>
+    <div class="slicer-pill">Male</div>
+    <div class="slicer-pill">Female</div>
+  </div>
+</div>
+
+<!-- REPORT CANVAS -->
+<div class="report-canvas">
+
+  <!-- ROW 1: KPI CARDS -->
+  <div class="row row-kpi">
+
+    <div class="visual">
+      <div class="kpi-icon">🧑‍🤝‍🧑</div>
+      <div class="visual-title">Total Patients</div>
+      <div class="kpi-visual">
+        <div class="kpi-main-val" style="color:#0078D4">48,320</div>
+        <div>
+          <div class="kpi-target-row">
+            <span class="kpi-target-label">vs Target 45,000</span>
+            <span class="kpi-delta up">▲ 7.4%</span>
+          </div>
+          <div class="kpi-progress"><div class="kpi-progress-fill" style="width:89%;background:#0078D4"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="visual">
+      <div class="kpi-icon">🛏️</div>
+      <div class="visual-title">Bed Occupancy Rate</div>
+      <div class="kpi-visual">
+        <div class="kpi-main-val" style="color:#E8B300">82%</div>
+        <div>
+          <div class="kpi-target-row">
+            <span class="kpi-target-label">Target: 80%</span>
+            <span class="kpi-delta warn">▲ 2%</span>
+          </div>
+          <div class="kpi-progress"><div class="kpi-progress-fill" style="width:82%;background:#E8B300"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="visual">
+      <div class="kpi-icon">⏱️</div>
+      <div class="visual-title">Avg. Length of Stay</div>
+      <div class="kpi-visual">
+        <div class="kpi-main-val" style="color:#107C10">4.8 days</div>
+        <div>
+          <div class="kpi-target-row">
+            <span class="kpi-target-label">Target: ≤5 days</span>
+            <span class="kpi-delta up">✓ On Track</span>
+          </div>
+          <div class="kpi-progress"><div class="kpi-progress-fill" style="width:70%;background:#107C10"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="visual">
+      <div class="kpi-icon">🔁</div>
+      <div class="visual-title">Readmission Rate</div>
+      <div class="kpi-visual">
+        <div class="kpi-main-val" style="color:#A4262C">9.2%</div>
+        <div>
+          <div class="kpi-target-row">
+            <span class="kpi-target-label">Target: &lt;8%</span>
+            <span class="kpi-delta down">▲ 1.2%</span>
+          </div>
+          <div class="kpi-progress"><div class="kpi-progress-fill" style="width:92%;background:#A4262C"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="visual">
+      <div class="kpi-icon">⭐</div>
+      <div class="visual-title">Patient Satisfaction</div>
+      <div class="kpi-visual">
+        <div class="kpi-main-val" style="color:#8764B8">87%</div>
+        <div>
+          <div class="kpi-target-row">
+            <span class="kpi-target-label">Target: 85%</span>
+            <span class="kpi-delta up">▲ 2%</span>
+          </div>
+          <div class="kpi-progress"><div class="kpi-progress-fill" style="width:87%;background:#8764B8"></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 2: LINE CHART + DONUT + BAR -->
+  <div class="row row-3">
+
+    <!-- Monthly Admissions Line Chart -->
+    <div class="visual">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">Monthly Patient Admissions vs Discharges</div>
+          <div class="visual-subtitle">Clustered Line Chart — Jan to Dec 2024</div>
+        </div>
+        <div class="visual-more">⋯</div>
+      </div>
+      <canvas id="lineChart" height="155"></canvas>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-rect" style="background:#0078D4"></div>Admissions</div>
+        <div class="legend-item"><div class="legend-rect" style="background:#E8B300"></div>Discharges</div>
+        <div class="legend-item"><div class="legend-rect" style="background:#107C10"></div>Deaths</div>
+      </div>
+    </div>
+
+    <!-- Disease Donut -->
+    <div class="visual">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">Disease Category Distribution</div>
+          <div class="visual-subtitle">Donut Chart — % share by diagnosis</div>
+        </div>
+        <div class="visual-more">⋯</div>
+      </div>
+      <canvas id="donutChart" height="155"></canvas>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#0078D4"></div>Cardiac (22%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#E8B300"></div>Ortho (18%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#107C10"></div>Neuro (15%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#A4262C"></div>Respiratory (14%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#8764B8"></div>Diabetes (12%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#00B7C3"></div>Others (19%)</div>
+      </div>
+    </div>
+
+    <!-- Bed Occupancy Bar -->
+    <div class="visual">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">Bed Occupancy by Department</div>
+          <div class="visual-subtitle">Clustered Bar Chart — Actual vs Target</div>
+        </div>
+        <div class="visual-more">⋯</div>
+      </div>
+      <canvas id="bedBar" height="155"></canvas>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-rect" style="background:#0078D4"></div>Actual %</div>
+        <div class="legend-item"><div class="legend-rect" style="background:#E1DFDD;border:1px dashed #aaa"></div>Target 80%</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 3: STACKED BAR + TABLE -->
+  <div class="row row-2">
+
+    <!-- Stacked Bar: Treatment Outcomes -->
+    <div class="visual">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">Treatment Outcomes by Department</div>
+          <div class="visual-subtitle">100% Stacked Bar Chart — Recovered / Referred / Expired</div>
+        </div>
+        <div class="visual-more">⋯</div>
+      </div>
+      <canvas id="stackedBar" height="165"></canvas>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-rect" style="background:#107C10"></div>Recovered</div>
+        <div class="legend-item"><div class="legend-rect" style="background:#E8B300"></div>Referred</div>
+        <div class="legend-item"><div class="legend-rect" style="background:#A4262C"></div>Expired</div>
+      </div>
+    </div>
+
+    <!-- Matrix Table -->
+    <div class="visual">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">Department Performance Matrix</div>
+          <div class="visual-subtitle">Table Visual — KPI summary by department</div>
+        </div>
+        <div class="visual-more">⋯</div>
+      </div>
+      <table class="pbi-table">
+        <thead>
+          <tr>
+            <th>Department</th>
+            <th>Patients</th>
+            <th>Avg LOS</th>
+            <th>Readmit%</th>
+            <th>Occupancy</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Cardiology</b></td>
+            <td>9,840</td>
+            <td>5.2d</td>
+            <td>
+              <div class="td-bar">11.4%
+                <div class="td-bar-bg"><div class="td-bar-fill" style="width:60%;background:#A4262C"></div></div>
+              </div>
+            </td>
+            <td>88%</td>
+            <td><span class="status st-crit">Critical</span></td>
+          </tr>
+          <tr>
+            <td><b>Orthopaedics</b></td>
+            <td>7,210</td>
+            <td>4.1d</td>
+            <td>
+              <div class="td-bar">7.8%
+                <div class="td-bar-bg"><div class="td-bar-fill" style="width:40%;background:#E8B300"></div></div>
+              </div>
+            </td>
+            <td>76%</td>
+            <td><span class="status st-good">Good</span></td>
+          </tr>
+          <tr>
+            <td><b>Neurology</b></td>
+            <td>6,540</td>
+            <td>5.8d</td>
+            <td>
+              <div class="td-bar">10.1%
+                <div class="td-bar-bg"><div class="td-bar-fill" style="width:53%;background:#A4262C"></div></div>
+              </div>
+            </td>
+            <td>85%</td>
+            <td><span class="status st-warn">Warning</span></td>
+          </tr>
+          <tr>
+            <td><b>ICU</b></td>
+            <td>3,980</td>
+            <td>7.4d</td>
+            <td>
+              <div class="td-bar">13.6%
+                <div class="td-bar-bg"><div class="td-bar-fill" style="width:68%;background:#A4262C"></div></div>
+              </div>
+            </td>
+            <td>94%</td>
+            <td><span class="status st-crit">Critical</span></td>
+          </tr>
+          <tr>
+            <td><b>Respiratory</b></td>
+            <td>5,870</td>
+            <td>4.6d</td>
+            <td>
+              <div class="td-bar">8.9%
+                <div class="td-bar-bg"><div class="td-bar-fill" style="width:45%;background:#E8B300"></div></div>
+              </div>
+            </td>
+            <td>81%</td>
+            <td><span class="status st-warn">Warning</span></td>
+          </tr>
+          <tr>
+            <td><b>OPD / General</b></td>
+            <td>14,880</td>
+            <td>1.2d</td>
+            <td>
+              <div class="td-bar">4.2%
+                <div class="td-bar-bg"><div class="td-bar-fill" style="width:21%;background:#107C10"></div></div>
+              </div>
+            </td>
+            <td>69%</td>
+            <td><span class="status st-good">Good</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ROW 4: WAIT TIME + AGE GROUP + COST + READMISSION TREND -->
+  <div class="row row-4">
+
+    <!-- Wait Time Horizontal Bar -->
+    <div class="visual">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">Avg. Wait Time (min)</div>
+          <div class="visual-subtitle">Bar Chart — by Department</div>
+        </div>
+        <div class="visual-more">⋯</div>
+      </div>
+      <canvas id="waitBar" height="170"></canvas>
+    </div>
+
+    <!-- Age Group Distribution -->
+    <div class="visual">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">Patients by Age Group</div>
+          <div class="visual-subtitle">Column Chart — demographic split</div>
+        </div>
+        <div class="visual-more">⋯</div>
+      </div>
+      <canvas id="ageChart" height="170"></canvas>
+    </div>
+
+    <!-- Revenue vs Cost Area Chart -->
+    <div class="visual">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">Revenue vs Cost (₹ Lakhs)</div>
+          <div class="visual-subtitle">Area Chart — monthly comparison</div>
+        </div>
+        <div class="visual-more">⋯</div>
+      </div>
+      <canvas id="areaChart" height="170"></canvas>
+    </div>
+
+    <!-- Readmission Trend -->
+    <div class="visual">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">Readmission Rate Trend</div>
+          <div class="visual-subtitle">Line Chart — monthly % FY 2024</div>
+        </div>
+        <div class="visual-more">⋯</div>
+      </div>
+      <canvas id="readmitLine" height="170"></canvas>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- FOOTER / PAGE TABS -->
+<div class="report-footer">
+  <div class="footer-pages">
+    <div class="page-tab active">Overview</div>
+    <div class="page-tab">Patient Details</div>
+    <div class="page-tab">Financial</div>
+    <div class="page-tab">Staff Metrics</div>
+  </div>
+  <div class="footer-info">Healthcare Analytics Dashboard &nbsp;|&nbsp; FY 2024 &nbsp;|&nbsp; Data Source: Hospital_Records_2024.xlsx</div>
+</div>
+
+<script>
+const PBI = {
+  blue:   '#0078D4',
+  yellow: '#E8B300',
+  green:  '#107C10',
+  red:    '#A4262C',
+  purple: '#8764B8',
+  teal:   '#00B7C3',
+  orange: '#D83B01',
+  grid:   '#F3F2F1',
+  text:   '#605E5C',
+};
+
+Chart.defaults.font.family = "'Segoe UI', sans-serif";
+Chart.defaults.font.size   = 10;
+Chart.defaults.color       = PBI.text;
+
+const months   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const depts    = ['Cardiology','Ortho','Neuro','ICU','Resp.','OPD'];
+
+// ── 1. LINE CHART — Admissions vs Discharges ──
+new Chart(document.getElementById('lineChart'), {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [
+      { label:'Admissions', data:[3800,3600,4100,3950,4200,4400,4100,4350,4500,4200,4050,3870],
+        borderColor: PBI.blue, backgroundColor: PBI.blue+'22',
+        borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 5, tension:.35, fill:false },
+      { label:'Discharges', data:[3650,3500,3980,3800,4050,4200,3900,4200,4300,4100,3900,3750],
+        borderColor: PBI.yellow, backgroundColor: PBI.yellow+'22',
+        borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 5, tension:.35, fill:false },
+      { label:'Deaths', data:[120,110,135,115,130,140,125,145,150,130,125,118],
+        borderColor: PBI.red, backgroundColor: PBI.red+'22',
+        borderWidth: 2, pointRadius: 3, tension:.35, fill:false },
+    ]
+  },
+  options: {
+    plugins:{ legend:{ display:false } },
+    scales: {
+      x: { grid:{ color:'#F3F2F1' }, ticks:{ font:{ size:9 } } },
+      y: { grid:{ color:'#F3F2F1' }, ticks:{ font:{ size:9 } } }
+    }
+  }
+});
+
+// ── 2. DONUT — Disease Distribution ──
+new Chart(document.getElementById('donutChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Cardiac','Ortho','Neuro','Respiratory','Diabetes','Others'],
+    datasets: [{
+      data: [22,18,15,14,12,19],
+      backgroundColor: [PBI.blue, PBI.yellow, PBI.green, PBI.red, PBI.purple, PBI.teal],
+      borderColor: '#fff', borderWidth: 3,
+      hoverOffset: 8
+    }]
+  },
+  options: {
+    cutout: '65%',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.label}: ${ctx.raw}%`
+        }
+      }
+    }
+  }
+});
+
+// ── 3. CLUSTERED BAR — Bed Occupancy ──
+new Chart(document.getElementById('bedBar'), {
+  type: 'bar',
+  data: {
+    labels: depts,
+    datasets: [
+      { label:'Actual %', data:[88,76,85,94,81,69],
+        backgroundColor: [PBI.red, PBI.green, PBI.yellow, PBI.red, PBI.yellow, PBI.green],
+        borderRadius: 3, barPercentage:.6 },
+      { label:'Target', data:[80,80,80,80,80,80],
+        backgroundColor: '#D2D0CE', borderRadius: 3, barPercentage:.3 }
+    ]
+  },
+  options: {
+    plugins:{ legend:{ display:false } },
+    scales: {
+      x:{ grid:{ display:false }, ticks:{ font:{ size:9 } } },
+      y:{ grid:{ color:'#F3F2F1' }, max:100, ticks:{ callback: v => v+'%', font:{ size:9 } } }
+    }
+  }
+});
+
+// ── 4. STACKED BAR — Treatment Outcomes ──
+new Chart(document.getElementById('stackedBar'), {
+  type: 'bar',
+  data: {
+    labels: depts,
+    datasets: [
+      { label:'Recovered', data:[78,88,72,61,76,93],
+        backgroundColor: PBI.green+'CC', borderRadius: 0 },
+      { label:'Referred',  data:[15, 9,18,25,18, 5],
+        backgroundColor: PBI.yellow+'CC' },
+      { label:'Expired',   data:[ 7, 3,10,14, 6, 2],
+        backgroundColor: PBI.red+'CC' }
+    ]
+  },
+  options: {
+    indexAxis: 'x',
+    plugins:{ legend:{ display:false } },
+    scales: {
+      x:{ stacked:true, grid:{ display:false }, ticks:{ font:{ size:9 } } },
+      y:{ stacked:true, max:100, grid:{ color:'#F3F2F1' },
+          ticks:{ callback: v => v+'%', font:{ size:9 } } }
+    }
+  }
+});
+
+// ── 5. HORIZONTAL BAR — Wait Time ──
+new Chart(document.getElementById('waitBar'), {
+  type: 'bar',
+  data: {
+    labels: depts,
+    datasets: [{
+      label: 'Wait Time (min)',
+      data: [52, 28, 45, 67, 38, 22],
+      backgroundColor: [PBI.red, PBI.green, PBI.yellow, PBI.red, PBI.yellow, PBI.green],
+      borderRadius: 3, barPercentage: .55
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    plugins:{ legend:{ display:false } },
+    scales:{
+      x:{ grid:{ color:'#F3F2F1' }, ticks:{ font:{size:9} } },
+      y:{ grid:{ display:false }, ticks:{ font:{size:9} } }
+    }
+  }
+});
+
+// ── 6. COLUMN — Age Group ──
+new Chart(document.getElementById('ageChart'), {
+  type: 'bar',
+  data: {
+    labels: ['0–14','15–29','30–44','45–59','60–74','75+'],
+    datasets: [{
+      label: 'Patients',
+      data: [4200, 6800, 9400, 12600, 10300, 5020],
+      backgroundColor: [PBI.teal, PBI.blue, PBI.purple, PBI.yellow, PBI.orange, PBI.red],
+      borderRadius: 4, barPercentage:.65
+    }]
+  },
+  options: {
+    plugins:{ legend:{ display:false } },
+    scales:{
+      x:{ grid:{ display:false }, ticks:{ font:{size:9} } },
+      y:{ grid:{ color:'#F3F2F1' }, ticks:{ font:{size:9} } }
+    }
+  }
+});
+
+// ── 7. AREA — Revenue vs Cost ──
+new Chart(document.getElementById('areaChart'), {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [
+      { label:'Revenue (₹L)', data:[420,390,460,445,480,510,490,520,540,500,470,440],
+        borderColor: PBI.blue, backgroundColor: PBI.blue+'33',
+        borderWidth: 2.5, tension:.4, fill:true, pointRadius:2 },
+      { label:'Cost (₹L)', data:[310,295,340,330,355,380,360,385,400,375,350,330],
+        borderColor: PBI.orange, backgroundColor: PBI.orange+'22',
+        borderWidth: 2.5, tension:.4, fill:true, pointRadius:2 }
+    ]
+  },
+  options: {
+    plugins:{ legend:{ display:false } },
+    scales:{
+      x:{ grid:{ display:false }, ticks:{ font:{size:9} } },
+      y:{ grid:{ color:'#F3F2F1' }, ticks:{ font:{size:9} } }
+    }
+  }
+});
+
+// ── 8. LINE — Readmission Trend ──
+new Chart(document.getElementById('readmitLine'), {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [{
+      label:'Readmission %',
+      data:[10.8,10.2,9.9,9.6,9.4,9.8,9.1,9.3,8.8,9.0,8.7,9.2],
+      borderColor: PBI.red, backgroundColor: PBI.red+'22',
+      borderWidth: 2.5, tension:.4, fill:true, pointRadius:3,
+      pointBackgroundColor: PBI.red
+    },{
+      label:'Target 8%',
+      data:[8,8,8,8,8,8,8,8,8,8,8,8],
+      borderColor: PBI.green, borderDash:[5,4],
+      borderWidth: 1.5, pointRadius:0, fill:false
+    }]
+  },
+  options: {
+    plugins:{ legend:{ display:false } },
+    scales:{
+      x:{ grid:{ display:false }, ticks:{ font:{size:9} } },
+      y:{ grid:{ color:'#F3F2F1' }, min:6, max:13,
+          ticks:{ callback: v => v+'%', font:{size:9} } }
+    }
+  }
+});
+</script>
+</body>
+</html>
